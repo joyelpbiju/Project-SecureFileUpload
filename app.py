@@ -14,7 +14,7 @@ UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
 API_KEY = os.getenv('API_KEY')
 ALLOWED_IPS = os.getenv('ALLOWED_IPS', '').split(',')
 
-ALLOWED_EXTENSIONS = {'.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.heif', '.raw', '.svg', '.psd'}
+ALLOWED_EXTENSIONS = {'.jpg','.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.heif', '.raw', '.svg', '.psd'}
 
 # Ensure required folders exist at runtime
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
