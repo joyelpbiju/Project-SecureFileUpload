@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   secure_file_upload:
     build: .
     container_name: secure_file_upload_app
     ports:
-      - "8084:8080"
+      - "8084:8084"
     volumes:
       - ./uploads:/app/uploads
       - ./db:/app/db

@@ -5,24 +5,24 @@ import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
-# Load .env
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
 API_KEY = os.getenv('API_KEY')
-
-# Multi-IP Support
 ALLOWED_IPS = os.getenv('ALLOWED_IPS', '').split(',')
+
 ALLOWED_EXTENSIONS = {'.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.heif', '.raw', '.svg', '.psd'}
+
+# Ensure required folders exist at runtime
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs('db', exist_ok=True)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs('db', exist_ok=True)
 
 class LogEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -137,4 +137,4 @@ def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    app.run(host='0.0.0.0', port=8084, debug=True)
