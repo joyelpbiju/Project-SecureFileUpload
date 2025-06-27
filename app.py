@@ -5,16 +5,17 @@ import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
-# Load environment variables
+# Load .env
 load_dotenv()
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
-ALLOWED_IP = os.getenv('ALLOWED_IP')
 API_KEY = os.getenv('API_KEY')
 
-ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.heif', '.raw', '.svg', '.psd'}
+# Multi-IP Support
+ALLOWED_IPS = os.getenv('ALLOWED_IPS', '').split(',')
+ALLOWED_EXTENSIONS = {'.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.heif', '.raw', '.svg', '.psd'}
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -37,7 +38,8 @@ with app.app_context():
 
 def allowed_client_ip():
     client_ip = request.remote_addr
-    return client_ip == ALLOWED_IP or client_ip == '127.0.0.1' or client_ip.startswith('172.')
+    clean_ips = [ip.strip() for ip in ALLOWED_IPS if ip.strip()]
+    return client_ip in clean_ips or client_ip == '127.0.0.1' or client_ip.startswith('172.')
 
 def check_api_key():
     key = request.headers.get('X-API-KEY')
@@ -74,7 +76,7 @@ def restrict_ip_and_key():
         return
     if request.endpoint in ['upload', 'delete']:
         if not allowed_client_ip():
-            abort(403, description="Access Denied: Invalid IP")
+            abort(403, description=f"Access Denied: IP {request.remote_addr} not allowed.")
         if not check_api_key():
             abort(401, description="Unauthorized: Invalid API Key")
 
@@ -132,7 +134,7 @@ def delete():
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+    return send_from_directory(UPLOAD_FOLDER, filename
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
