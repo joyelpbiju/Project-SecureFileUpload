@@ -1,11 +1,11 @@
-from flask import Flask, request, render_template, jsonify, abort, send_from_directory
+from flask import Flask, request, render_template, jsonify, abort, send_from_directory, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
-
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
@@ -13,6 +13,8 @@ app = Flask(__name__)
 UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
 ALLOWED_IP = os.getenv('ALLOWED_IP')
 API_KEY = os.getenv('API_KEY')
+
+ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.heif', '.raw', '.svg', '.psd'}
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -27,6 +29,7 @@ class LogEntry(db.Model):
     filename = db.Column(db.String(200))
     extension = db.Column(db.String(20))
     client_ip = db.Column(db.String(50))
+    status = db.Column(db.String(50))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 with app.app_context():
@@ -40,10 +43,16 @@ def check_api_key():
     key = request.headers.get('X-API-KEY')
     return key == API_KEY
 
-def log_action(action, filename):
+def log_action(action, filename, status):
     extension = os.path.splitext(filename)[1].lstrip('.')
     client_ip = request.remote_addr
-    log_entry = LogEntry(action=action, filename=filename, extension=extension, client_ip=client_ip)
+    log_entry = LogEntry(
+        action=action,
+        filename=filename,
+        extension=extension,
+        client_ip=client_ip,
+        status=status
+    )
     db.session.add(log_entry)
     db.session.commit()
 
@@ -72,37 +81,53 @@ def restrict_ip_and_key():
 @app.route('/')
 def index():
     files = []
+    error = request.args.get('error', '')
     for filename in os.listdir(UPLOAD_FOLDER):
         try:
             files.append(get_file_info(filename))
         except Exception:
             continue
     file_count = len(files)
-    return render_template('index.html', files=files, file_count=file_count, api_key=API_KEY)
+    allowed_list = ", ".join(ALLOWED_EXTENSIONS)
+    return render_template('index.html', files=files, file_count=file_count, api_key=API_KEY, error=error, allowed_list=allowed_list)
 
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'image' not in request.files:
-        return jsonify({'status': 'fail', 'message': 'No file part'}), 400
+        log_action('Upload-Attempt', 'No-File', 'Failed-NoFileSelected')
+        return redirect(url_for('index', error="No file selected for upload."))
+
     file = request.files['image']
     if file.filename == '':
-        return jsonify({'status': 'fail', 'message': 'No selected file'}), 400
+        log_action('Upload-Attempt', 'EmptyFilename', 'Failed-NoFilename')
+        return redirect(url_for('index', error="No filename provided."))
+
     filename = secure_filename(file.filename)
+    extension = os.path.splitext(filename)[1].lower()
+
+    if extension not in ALLOWED_EXTENSIONS:
+        allowed_types = ", ".join(ALLOWED_EXTENSIONS)
+        log_action('Upload-Attempt', filename, f'Failed-InvalidFileType: {extension}')
+        return redirect(url_for('index', error=f"Invalid file type: '{extension}'. Allowed types: {allowed_types}"))
+
     file.save(os.path.join(UPLOAD_FOLDER, filename))
-    log_action('Upload', filename)
-    return jsonify({'status': 'success', 'message': f'File {filename} uploaded.'})
+    log_action('Upload', filename, 'Success')
+    return redirect(url_for('index'))
 
 @app.route('/delete', methods=['POST'])
 def delete():
     filename = request.form.get('filename')
     if not filename:
+        log_action('Delete-Attempt', 'MissingFilename', 'Failed-NoFilenameProvided')
         return jsonify({'status': 'fail', 'message': 'Filename required'}), 400
+
     filepath = os.path.join(UPLOAD_FOLDER, secure_filename(filename))
     if os.path.exists(filepath):
         os.remove(filepath)
-        log_action('Delete', filename)
+        log_action('Delete', filename, 'Success')
         return jsonify({'status': 'success', 'message': f'File {filename} deleted.'})
     else:
+        log_action('Delete-Attempt', filename, 'Failed-FileNotFound')
         return jsonify({'status': 'fail', 'message': f'File {filename} not found.'}), 404
 
 @app.route('/uploads/<filename>')

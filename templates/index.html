@@ -3,37 +3,15 @@
 <head>
     <title>Image Upload/Delete Service</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        table, th, td {
-            border: 1px solid #ccc;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-        }
-        img {
-            max-width: 100%;
-        }
-        #preview {
-            margin-top: 20px;
-        }
-        .button {
-            padding: 5px 10px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        .button.delete {
-            background-color: #dc3545;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        table, th, td { border: 1px solid #ccc; }
+        th, td { padding: 8px; text-align: left; }
+        img { max-width: 100%; }
+        #preview { margin-top: 20px; }
+        .button { padding: 5px 10px; background-color: #007BFF; color: white; border: none; cursor: pointer; }
+        .button.delete { background-color: #dc3545; }
+        .error { color: red; margin-bottom: 10px; }
     </style>
     <script>
         const API_KEY = "{{ api_key }}";
@@ -48,9 +26,9 @@
                 headers: { 'X-API-KEY': API_KEY },
                 body: formData
             });
-            const result = await response.json();
-            alert(result.message);
-            location.reload();
+            if (response.redirected) {
+                window.location.href = response.url;
+            }
         }
 
         async function deleteFileByName(filename) {
@@ -74,6 +52,12 @@
     </script>
 </head>
 <body>
+
+    {% if error %}
+    <div class="error">
+        <strong>Error:</strong> {{ error }}
+    </div>
+    {% endif %}
 
     <h2>Total Uploaded Files: {{ file_count }}</h2>
 
@@ -106,6 +90,7 @@
     </table>
 
     <h3>Upload New Image</h3>
+    <p>Allowed Types: {{ allowed_list }}</p>
     <input type="file" id="image">
     <button class="button" onclick="uploadFile()">Upload</button>
 
