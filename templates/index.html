@@ -2,6 +2,39 @@
 <html>
 <head>
     <title>Image Upload/Delete Service</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        img {
+            max-width: 100%;
+        }
+        #preview {
+            margin-top: 20px;
+        }
+        .button {
+            padding: 5px 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .button.delete {
+            background-color: #dc3545;
+        }
+    </style>
     <script>
         const API_KEY = "{{ api_key }}";
 
@@ -12,41 +45,74 @@
 
             const response = await fetch('/upload', {
                 method: 'POST',
-                headers: {
-                    'X-API-KEY': API_KEY
-                },
+                headers: { 'X-API-KEY': API_KEY },
                 body: formData
             });
-
             const result = await response.json();
             alert(result.message);
+            location.reload();
         }
 
-        async function deleteFile() {
-            const filename = document.getElementById('filename').value;
+        async function deleteFileByName(filename) {
             const formData = new FormData();
             formData.append('filename', filename);
 
             const response = await fetch('/delete', {
                 method: 'POST',
-                headers: {
-                    'X-API-KEY': API_KEY
-                },
+                headers: { 'X-API-KEY': API_KEY },
                 body: formData
             });
-
             const result = await response.json();
             alert(result.message);
+            location.reload();
+        }
+
+        function previewImage(filename) {
+            document.getElementById('preview').innerHTML =
+                `<h3>Preview: ${filename}</h3><img src="/uploads/${filename}" alt="${filename}">`;
         }
     </script>
 </head>
 <body>
-    <h2>Upload Image</h2>
-    <input type="file" id="image">
-    <button onclick="uploadFile()">Upload</button>
 
-    <h2>Delete Image</h2>
-    <input type="text" id="filename" placeholder="Enter filename to delete">
-    <button onclick="deleteFile()">Delete</button>
+    <h2>Total Uploaded Files: {{ file_count }}</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>File Name</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Upload Time</th>
+                <th>View</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for file in files %}
+            <tr>
+                <td>{{ file.name }}</td>
+                <td>{{ file.type }}</td>
+                <td>{{ file.size }}</td>
+                <td>{{ file.upload_time }}</td>
+                <td><button class="button" onclick="previewImage('{{ file.name }}')">View</button></td>
+                <td><button class="button delete" onclick="deleteFileByName('{{ file.name }}')">Delete</button></td>
+            </tr>
+            {% endfor %}
+            {% if files|length == 0 %}
+            <tr><td colspan="6">No files uploaded yet.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <h3>Upload New Image</h3>
+    <input type="file" id="image">
+    <button class="button" onclick="uploadFile()">Upload</button>
+
+    <div id="preview">
+        <h3>Image Preview</h3>
+        <p>Select a file to preview.</p>
+    </div>
+
 </body>
 </html>
