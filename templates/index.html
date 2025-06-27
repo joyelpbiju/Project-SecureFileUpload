@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Upload/Delete Service</title>
+    <script>
+        const API_KEY = "{{ api_key }}";
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('image');
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+
+            const response = await fetch('/upload', {
+                method: 'POST',
+                headers: {
+                    'X-API-KEY': API_KEY
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+            alert(result.message);
+        }
+
+        async function deleteFile() {
+            const filename = document.getElementById('filename').value;
+            const formData = new FormData();
+            formData.append('filename', filename);
+
+            const response = await fetch('/delete', {
+                method: 'POST',
+                headers: {
+                    'X-API-KEY': API_KEY
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+            alert(result.message);
+        }
+    </script>
+</head>
+<body>
+    <h2>Upload Image</h2>
+    <input type="file" id="image">
+    <button onclick="uploadFile()">Upload</button>
+
+    <h2>Delete Image</h2>
+    <input type="text" id="filename" placeholder="Enter filename to delete">
+    <button onclick="deleteFile()">Delete</button>
+</body>
+</html>
