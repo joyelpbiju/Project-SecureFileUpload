@@ -1,5 +1,3 @@
-# Project-SecureFileUpload
-A secure Flask-based web application that allows users to upload and delete images using token-based API authentication. It includes image validation and IP whitelisting to restrict access, ensuring controlled and secure usage.
 # Secure File Upload Service
 
 A Flask-based secure image upload and management web application with robust security features including API key authentication, IP restrictions, and comprehensive activity logging.
