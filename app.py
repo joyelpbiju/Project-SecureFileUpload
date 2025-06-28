@@ -5,7 +5,7 @@ import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
-# Load environment variables
+
 load_dotenv()
 
 app = Flask(__name__)
