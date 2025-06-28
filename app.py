@@ -14,15 +14,18 @@ UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
 API_KEY = os.getenv('API_KEY')
 ALLOWED_IPS = os.getenv('ALLOWED_IPS', '').split(',')
 
-ALLOWED_EXTENSIONS = {'.jpg','.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.heif', '.raw', '.svg', '.psd'}
+ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.heif', '.raw', '.svg', '.psd'}
 
-# Ensure required folders exist at runtime
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs('db', exist_ok=True)
+# Ensure db directory exists
+db_folder = os.path.join(os.getcwd(), 'db')
+os.makedirs(db_folder, exist_ok=True)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/app.db'
+# Use absolute database path
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(db_folder, 'app.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 class LogEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -36,8 +39,14 @@ class LogEntry(db.Model):
 with app.app_context():
     db.create_all()
 
+def get_real_client_ip():
+    forwarded = request.headers.get('X-Forwarded-For')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.remote_addr
+
 def allowed_client_ip():
-    client_ip = request.remote_addr
+    client_ip = get_real_client_ip()
     clean_ips = [ip.strip() for ip in ALLOWED_IPS if ip.strip()]
     return client_ip in clean_ips or client_ip == '127.0.0.1' or client_ip.startswith('172.')
 
@@ -47,7 +56,7 @@ def check_api_key():
 
 def log_action(action, filename, status):
     extension = os.path.splitext(filename)[1].lstrip('.')
-    client_ip = request.remote_addr
+    client_ip = get_real_client_ip()
     log_entry = LogEntry(
         action=action,
         filename=filename,
@@ -71,14 +80,12 @@ def get_file_info(filename):
     }
 
 @app.before_request
-def restrict_ip_and_key():
-    if request.endpoint in ['index', 'uploaded_file']:
+def global_ip_restriction():
+    exempt_endpoints = ['uploaded_file', 'static', 'favicon']
+    if request.endpoint in exempt_endpoints:
         return
-    if request.endpoint in ['upload', 'delete']:
-        if not allowed_client_ip():
-            abort(403, description=f"Access Denied: IP {request.remote_addr} not allowed.")
-        if not check_api_key():
-            abort(401, description="Unauthorized: Invalid API Key")
+    if not allowed_client_ip():
+        abort(403, description=f"Access Denied: Your IP '{get_real_client_ip()}' is not allowed.")
 
 @app.route('/')
 def index():
@@ -95,6 +102,9 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload():
+    if not check_api_key():
+        abort(401, description="Unauthorized: Invalid API Key")
+
     if 'image' not in request.files:
         log_action('Upload-Attempt', 'No-File', 'Failed-NoFileSelected')
         return redirect(url_for('index', error="No file selected for upload."))
@@ -118,6 +128,9 @@ def upload():
 
 @app.route('/delete', methods=['POST'])
 def delete():
+    if not check_api_key():
+        abort(401, description="Unauthorized: Invalid API Key")
+
     filename = request.form.get('filename')
     if not filename:
         log_action('Delete-Attempt', 'MissingFilename', 'Failed-NoFilenameProvided')
@@ -135,6 +148,10 @@ def delete():
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
+
+@app.route('/favicon.ico')
+def favicon():
+    abort(404)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8084, debug=True)
