@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+
+# Virtual environments
+.env
+.venv/
+venv/
+env/
+
+# Flask
+instance/
+.webassets-cache
+
+# Project-specific files
+# API key generation script (sensitive)
+api_key_gen.py
+
+# Database files (SQLite)
+*.db
+*.sqlite
+*.sqlite3
+db/
+
+# Upload directory contents (keep structure but ignore files)
+uploads/*
+!uploads/.gitkeep
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp

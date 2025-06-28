@@ -1,0 +1,52 @@
+# Git repository
+.git/
+.gitignore
+
+# Documentation
+README.md
+LICENSE
+
+# API key generation script (not needed in container)
+api_key_gen.py
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Database files (mounted as volumes)
+db/
+instance/
+*.db
+*.sqlite
+
+# Upload directory (mounted as volume)
+uploads/
+
+# Environment files
+.env
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
